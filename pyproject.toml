@@ -15,11 +15,13 @@ dev = [
 members = [
     "components/chat_client_api",
     "components/slack_client_impl",
+    "components/chat_client_service",
 ]
 
 [tool.uv.sources]
 chat-client-api = { workspace = true }
 slack-client-impl = { workspace = true }
+chat-client-service = { workspace = true }
 
 [tool.ruff]
 line-length = 88
@@ -55,6 +57,7 @@ testpaths = [
     "tests",
     "components/chat_client_api/tests",
     "components/slack_client_impl/tests",
+    "components/chat_client_service/tests",
 ]
 python_files = "test_*.py"
 
