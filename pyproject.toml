@@ -34,6 +34,7 @@ members = [
     "components/openai_ai_client_impl",
     "components/ticket_client_api",
     "components/http_ticket_client_impl",
+    "components/anthropic_ai_client_impl",
 ]
 
 [tool.uv.sources]
@@ -48,6 +49,7 @@ ai-client-api = { workspace = true }
 openai-ai-client-impl = { workspace = true }
 ticket-client-api = { workspace = true }
 http-ticket-client-impl = { workspace = true }
+anthropic-ai-client-impl = { workspace = true }
 
 [tool.ruff]
 line-length = 88
@@ -103,6 +105,7 @@ testpaths = [
     "components/openai_ai_client_impl/tests",
     "components/ticket_client_api/tests",
     "components/http_ticket_client_impl/tests",
+    "components/anthropic_ai_client_impl/tests",
 ]
 python_files = "test_*.py"
 
