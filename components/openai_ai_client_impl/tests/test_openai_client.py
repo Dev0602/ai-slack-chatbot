@@ -153,8 +153,8 @@ def test_execute_tool_no_handler_returns_json() -> None:
     assert "no_handler" in result
 
 
-def test_execute_tool_handler_exception_returns_error() -> None:
-    """_execute_tool should return error JSON when handler raises."""
+def test_execute_tool_handler_unexpected_exception_propagates() -> None:
+    """Unexpected handler exceptions should propagate to middleware."""
     client = OpenAiClient("test-key")
 
     def bad_handler() -> str:
@@ -162,8 +162,8 @@ def test_execute_tool_handler_exception_returns_error() -> None:
         raise RuntimeError(msg)
 
     tool = AiTool(name="boom", description="boom", parameters={}, handler=bad_handler)
-    result = client._execute_tool("boom", {}, {"boom": tool})
-    assert "boom" in result
+    with pytest.raises(RuntimeError, match="boom"):
+        client._execute_tool("boom", {}, {"boom": tool})
 
 
 def test_create_openai_client_with_key() -> None:

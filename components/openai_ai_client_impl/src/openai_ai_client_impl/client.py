@@ -7,7 +7,13 @@ import logging
 import os
 from typing import Any
 
-from ai_client_api.client import AiClient, AiTool, AiToolError, TokenUsage, register_ai_client
+from ai_client_api.client import (
+    AiClient,
+    AiTool,
+    AiToolError,
+    TokenUsage,
+    register_ai_client,
+)
 from openai import (
     APIConnectionError,
     APITimeoutError,

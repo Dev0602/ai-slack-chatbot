@@ -91,6 +91,9 @@ ignore = [
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+mypy_path = [
+    "components/chat_client_service_api_client",
+]
 exclude = [
     "components/chat_client_service_api_client/chat_client_service_api_client",
 ]
@@ -108,6 +111,17 @@ testpaths = [
     "components/anthropic_ai_client_impl/tests",
 ]
 python_files = "test_*.py"
+pythonpath = [
+    "components/chat_client_adapter/src",
+    "components/slack_client_impl/src",
+    "components/chat_client_service/src",
+    "components/ai_client_api/src",
+    "components/openai_ai_client_impl/src",
+    "components/ticket_client_api/src",
+    "components/http_ticket_client_impl/src",
+    "components/anthropic_ai_client_impl/src",
+    "components/chat_client_service_api_client",
+]
 
 [tool.coverage.run]
 branch = true
