@@ -82,12 +82,18 @@ def test_metrics_prometheus_format() -> None:
 
 
 def test_dashboard_returns_html() -> None:
-    """Dashboard endpoint should return an HTML page."""
+    """Dashboard endpoint should return the branded HTML telemetry page."""
     response = client.get("/dashboard")
     assert response.status_code == HTTP_200_OK
     assert "text/html" in response.headers["content-type"]
-    assert "Telemetry Dashboard" in response.text
-    assert "/metrics" in response.text
+    body = response.text
+    # Branded header and the JS hook that fetches /metrics on the page.
+    assert "Chat Service Telemetry" in body
+    assert "OSPSD" in body
+    assert "/metrics" in body
+    # Sections that prove the redesigned panels rendered, not the old shell.
+    assert "Status Class Distribution" in body
+    assert "AI Provider Usage" in body
 
 
 def test_metrics_records_per_route_breakdown() -> None:

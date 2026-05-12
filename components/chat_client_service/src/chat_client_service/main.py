@@ -901,83 +901,422 @@ _DASHBOARD_HTML = """\
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Chat Client Service — Telemetry Dashboard</title>
+<title>OSPSD · 09 — Chat Service Telemetry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;
-       color:#e2e8f0;padding:2rem}
-  h1{font-size:1.5rem;margin-bottom:1.5rem;color:#38bdf8}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-        gap:1rem;margin-bottom:2rem}
-  .card{background:#1e293b;border-radius:12px;padding:1.25rem;
-        border:1px solid #334155}
-  .card .label{font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;
-               color:#94a3b8;margin-bottom:.25rem}
-  .card .value{font-size:2rem;font-weight:700}
-  .ok{color:#4ade80} .warn{color:#facc15} .err{color:#f87171}
-  .bar-wrap{background:#334155;border-radius:6px;height:18px;overflow:hidden;
-            margin-top:.5rem;display:flex}
-  .bar-ok{background:#4ade80;height:100%}
-  .bar-err{background:#f87171;height:100%}
-  footer{margin-top:2rem;font-size:.75rem;color:#64748b;text-align:center}
-  #updated{font-size:.75rem;color:#64748b;margin-bottom:1rem}
+:root{
+  --bg:#0a0d0c;--surface:#0f1311;--surface-2:#131816;
+  --border:#1b211e;--border-strong:#2a3531;
+  --fg:#e8e9e8;--fg-muted:#8a948f;--fg-dim:#4a5350;
+  --ok:#5fc97c;--ok-soft:rgba(95,201,124,.14);
+  --warn:#eab308;--domain:#f97316;--infra:#ef4444;
+  --ai:#38bdf8;--highlight:#fbbf24;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  font-family:'JetBrains Mono',ui-monospace,'SF Mono','Menlo','Consolas',monospace;
+  background:var(--bg);color:var(--fg);
+  font-size:13px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+body{
+  background-image:
+    linear-gradient(rgba(95,201,124,.02) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(95,201,124,.02) 1px,transparent 1px);
+  background-size:32px 32px;background-position:-1px -1px;
+}
+.scanlines{
+  pointer-events:none;position:fixed;inset:0;z-index:1000;
+  background:repeating-linear-gradient(to bottom,
+    transparent 0,transparent 2px,
+    rgba(255,255,255,.012) 2px,rgba(255,255,255,.012) 3px);
+}
+.shell{max-width:1400px;margin:0 auto;padding:28px 24px 80px}
+header{
+  display:grid;grid-template-columns:1fr auto;gap:16px;
+  align-items:center;padding:18px 0;
+  border-bottom:1px solid var(--border);margin-bottom:24px;
+}
+.brand{display:flex;flex-wrap:wrap;align-items:center;gap:18px}
+.brand .logo{font-weight:800;font-size:15px;letter-spacing:.18em;color:var(--fg)}
+.brand .logo span{color:var(--ok)}
+.brand .pipe{color:var(--fg-dim)}
+.brand .title{font-weight:500;font-size:13px;letter-spacing:.32em;
+  color:var(--fg-muted);text-transform:uppercase}
+.live{display:inline-flex;gap:8px;align-items:center;
+  padding:4px 10px;border:1px solid var(--ok);color:var(--ok);
+  font-size:11px;letter-spacing:.18em;font-weight:600;
+  text-transform:uppercase;background:var(--ok-soft)}
+.live::before{content:'';width:7px;height:7px;background:var(--ok);
+  animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.controls{display:flex;align-items:center;gap:14px;
+  font-size:11px;letter-spacing:.12em;color:var(--fg-muted)}
+.timestamp{white-space:nowrap}
+.timestamp .v{color:var(--fg)}
+.refresh-btn{background:transparent;border:1px solid var(--border-strong);
+  color:var(--fg);padding:6px 12px;font:inherit;font-size:11px;
+  letter-spacing:.16em;cursor:pointer;text-transform:uppercase;
+  transition:border-color 120ms,color 120ms}
+.refresh-btn:hover{border-color:var(--ok);color:var(--ok)}
+.refresh-btn svg{vertical-align:-2px;margin-right:6px}
+.refresh-btn.spin svg{animation:spin 600ms linear}
+@keyframes spin{to{transform:rotate(360deg)}}
+.section-title{display:flex;align-items:center;gap:14px;
+  margin:28px 0 14px;text-transform:uppercase;letter-spacing:.3em;
+  font-size:11px;color:var(--fg-muted);font-weight:600}
+.section-title::before{content:'';width:8px;height:8px;background:var(--ok)}
+.section-title.ai::before{background:var(--ai)}
+.section-title .rule{flex:1;height:1px;background:var(--border)}
+.section-title .meta{font-size:11px;color:var(--fg-dim);letter-spacing:.12em}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);
+  border:1px solid var(--border-strong);background:var(--surface)}
+.tile{position:relative;padding:22px 24px 24px;border-right:1px solid var(--border)}
+.tile:last-child{border-right:0}
+.tile .label{font-size:10px;letter-spacing:.28em;color:var(--fg-muted);
+  text-transform:uppercase}
+.tile .value{display:block;margin-top:18px;font-size:42px;font-weight:700;
+  font-feature-settings:'tnum';letter-spacing:-.02em;color:var(--fg);
+  transition:color 160ms}
+.tile .delta{margin-top:8px;font-size:11px;letter-spacing:.16em;color:var(--fg-muted)}
+.tile.ok .value{color:var(--ok)}
+.tile.fail .value{color:var(--infra)}
+.tile.lat .value{color:var(--highlight)}
+.tile::before,.tile::after{content:'';position:absolute;width:12px;height:12px;
+  border-color:var(--ok);border-style:solid;border-width:0;opacity:0;
+  transition:opacity 200ms}
+.tile::before{top:8px;left:8px;border-top-width:1px;border-left-width:1px}
+.tile::after{bottom:8px;right:8px;border-bottom-width:1px;border-right-width:1px}
+.tile:hover::before,.tile:hover::after{opacity:1}
+.mid{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;margin-top:8px}
+.panel{border:1px solid var(--border-strong);background:var(--surface);
+  padding:22px 24px 24px}
+.panel.ai{border-color:rgba(56,189,248,.35);
+  background:linear-gradient(180deg,rgba(56,189,248,.05),transparent 60%),var(--surface)}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;
+  margin-bottom:18px}
+.panel-title{font-size:11px;letter-spacing:.28em;color:var(--fg-muted);
+  text-transform:uppercase;font-weight:600}
+.panel-meta{font-size:11px;color:var(--fg-dim);letter-spacing:.12em}
+.stack-bar{display:flex;height:38px;background:var(--surface-2);
+  border:1px solid var(--border);overflow:hidden}
+.stack-bar>div{position:relative;display:flex;align-items:center;
+  padding:0 10px;font-size:11px;font-weight:700;letter-spacing:.08em;
+  color:var(--bg);overflow:hidden;white-space:nowrap;
+  transition:width 600ms cubic-bezier(.2,.7,.2,1)}
+.stack-bar .ok{background:var(--ok)}
+.stack-bar .domain{background:var(--domain)}
+.stack-bar .infra{background:var(--infra)}
+.legend{display:flex;gap:16px;margin-top:12px;font-size:11px;
+  color:var(--fg-muted);letter-spacing:.12em;flex-wrap:wrap}
+.legend .swatch{display:inline-block;width:9px;height:9px;
+  margin-right:6px;vertical-align:-1px}
+.rates{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+.rate-card{border:1px solid var(--border);padding:14px 16px;background:var(--surface-2)}
+.rate-card .label{font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--fg-muted)}
+.rate-card .num{display:block;margin-top:8px;font-size:22px;font-weight:700;
+  font-feature-settings:'tnum'}
+.rate-card.ok .num{color:var(--ok)}
+.rate-card.domain .num{color:var(--domain)}
+.rate-card.infra .num{color:var(--infra)}
+.ai-stats{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+.ai-stat{border:1px solid var(--border);padding:14px 16px;background:var(--surface-2)}
+.ai-stat .lbl{font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--fg-muted)}
+.ai-stat .val{display:block;margin-top:6px;font-size:22px;font-weight:700;
+  color:var(--ai);font-feature-settings:'tnum'}
+.ai-stat.usd .val{color:var(--highlight)}
+.ai-stat .sub{margin-top:4px;font-size:10px;letter-spacing:.16em;color:var(--fg-dim)}
+.ai-tokens{margin-top:16px;border:1px solid var(--border);padding:14px 16px;
+  background:var(--surface-2)}
+.ai-tokens .row{display:flex;justify-content:space-between;font-size:10px;
+  letter-spacing:.24em;color:var(--fg-muted);text-transform:uppercase}
+.split-bar{display:flex;height:8px;margin-top:10px;background:var(--surface);
+  border:1px solid var(--border)}
+.split-bar>div{transition:width 600ms cubic-bezier(.2,.7,.2,1)}
+.split-bar .prompt{background:var(--ai)}
+.split-bar .completion{background:var(--highlight)}
+.split-meta{display:flex;justify-content:space-between;margin-top:6px;
+  font-size:11px;color:var(--fg-muted);letter-spacing:.12em;
+  font-feature-settings:'tnum'}
+.routes{border:1px solid var(--border-strong);background:var(--surface);margin-top:8px}
+.routes-head,.route-row{display:grid;
+  grid-template-columns:80px 1fr 90px 120px 140px 110px;
+  align-items:center;padding:0 20px}
+.routes-head{height:36px;border-bottom:1px solid var(--border);
+  font-size:10px;letter-spacing:.24em;color:var(--fg-muted);text-transform:uppercase}
+.route-row{height:56px;border-bottom:1px solid var(--border);
+  transition:background 120ms}
+.route-row:last-child{border-bottom:0}
+.route-row:hover{background:var(--surface-2)}
+.method-pill{display:inline-flex;align-items:center;justify-content:center;
+  height:22px;padding:0 8px;font-size:10px;font-weight:700;letter-spacing:.14em;
+  border:1px solid var(--border-strong);color:var(--fg);text-transform:uppercase}
+.method-pill.GET{color:var(--ok);border-color:rgba(95,201,124,.4)}
+.method-pill.POST{color:var(--ai);border-color:rgba(56,189,248,.4)}
+.method-pill.PUT,.method-pill.PATCH{color:var(--warn);border-color:rgba(234,179,8,.4)}
+.method-pill.DELETE{color:var(--infra);border-color:rgba(239,68,68,.4)}
+.route-name{font-size:13px;color:var(--fg);word-break:break-all}
+.num-cell{font-feature-settings:'tnum';font-size:13px;color:var(--fg)}
+.num-cell.muted{color:var(--fg-muted)}
+.mix-bar{display:flex;height:8px;background:var(--surface-2);border:1px solid var(--border)}
+.mix-bar>div{transition:width 400ms ease}
+.mix-bar .ok{background:var(--ok)}
+.mix-bar .domain{background:var(--domain)}
+.mix-bar .infra{background:var(--infra)}
+.lat-cell{font-feature-settings:'tnum';color:var(--highlight);font-size:13px}
+.empty-state{padding:36px 20px;text-align:center;font-size:11px;
+  color:var(--fg-dim);letter-spacing:.24em}
+footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  font-size:10px;letter-spacing:.22em;color:var(--fg-dim);text-transform:uppercase}
+footer .links a{color:var(--fg-muted);text-decoration:none;margin-left:18px;
+  border-bottom:1px dotted transparent;transition:color 120ms,border-color 120ms}
+footer .links a:hover{color:var(--ok);border-bottom-color:var(--ok)}
+.fade-in{animation:fadeup 600ms cubic-bezier(.2,.7,.2,1) backwards}
+@keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media (max-width:960px){
+  .kpi{grid-template-columns:repeat(2,1fr)}
+  .tile:nth-child(2){border-right:0}
+  .tile:nth-child(1),.tile:nth-child(2){border-bottom:1px solid var(--border)}
+  .mid{grid-template-columns:1fr}
+  .routes-head,.route-row{grid-template-columns:60px 1fr 70px 110px}
+  .routes-head .hide-mobile,.route-row .hide-mobile{display:none}
+}
+@media (max-width:600px){
+  .brand .title{display:none}
+  .controls{font-size:10px;gap:10px}
+  .tile .value{font-size:30px}
+}
 </style>
 </head>
 <body>
-<h1>Telemetry Dashboard</h1>
-<p id="updated">loading…</p>
-<div class="grid">
-  <div class="card">
+<div class="scanlines"></div>
+<div class="shell">
+
+<header>
+  <div class="brand">
+    <div class="logo">OSPSD<span>·</span>09</div>
+    <span class="pipe">▕</span>
+    <div class="title">Chat Service Telemetry</div>
+  </div>
+  <div class="controls">
+    <div class="live">● LIVE</div>
+    <div class="timestamp">UPD <span class="v" id="updated">—</span></div>
+    <button class="refresh-btn" id="refresh" type="button" aria-label="Manual refresh">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M21 12a9 9 0 1 1-3.5-7.1L21 8"/><path d="M21 3v5h-5"/></svg>REFRESH
+    </button>
+  </div>
+</header>
+
+<div class="section-title fade-in" style="animation-delay:80ms">
+  <span>Service Overview</span><span class="rule"></span>
+  <span class="meta">poll · 5s</span>
+</div>
+<div class="kpi fade-in" style="animation-delay:140ms">
+  <div class="tile">
     <div class="label">Total Requests</div>
-    <div class="value" id="total">—</div>
+    <span class="value" id="total">—</span>
+    <div class="delta">since boot</div>
   </div>
-  <div class="card">
+  <div class="tile ok">
     <div class="label">Successful</div>
-    <div class="value ok" id="success">—</div>
+    <span class="value" id="ok">—</span>
+    <div class="delta" id="okPct">—</div>
   </div>
-  <div class="card">
+  <div class="tile fail">
     <div class="label">Failed</div>
-    <div class="value err" id="failed">—</div>
+    <span class="value" id="failed">—</span>
+    <div class="delta" id="failPct">—</div>
   </div>
-  <div class="card">
-    <div class="label">Success Rate</div>
-    <div class="value ok" id="srate">—</div>
-    <div class="bar-wrap"><div class="bar-ok" id="sbar"></div>
-    <div class="bar-err" id="fbar"></div></div>
-  </div>
-  <div class="card">
-    <div class="label">Failure Rate</div>
-    <div class="value err" id="frate">—</div>
-  </div>
-  <div class="card">
+  <div class="tile lat">
     <div class="label">Avg Latency</div>
-    <div class="value warn" id="latency">—</div>
+    <span class="value" id="lat">—</span>
+    <div class="delta">milliseconds</div>
   </div>
 </div>
-<footer>OSPSD Team 9 — Chat Client Service &middot; auto-refreshes every 5 s</footer>
+
+<div class="section-title fade-in" style="animation-delay:200ms">
+  <span>Outcome Breakdown</span><span class="rule"></span>
+</div>
+<div class="mid fade-in" style="animation-delay:260ms">
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Status Class Distribution</div>
+      <div class="panel-meta">ok · 4xx · 5xx</div>
+    </div>
+    <div class="stack-bar" id="stackBar">
+      <div class="ok" style="width:100%">OK</div>
+      <div class="domain" style="width:0%"></div>
+      <div class="infra" style="width:0%"></div>
+    </div>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--ok)"></span>ok 2xx/3xx</span>
+      <span><span class="swatch" style="background:var(--domain)"></span>domain 4xx</span>
+      <span><span class="swatch" style="background:var(--infra)"></span>infra 5xx</span>
+    </div>
+    <div class="rates">
+      <div class="rate-card ok">
+        <div class="label">Success Rate</div>
+        <span class="num" id="okRate">—</span>
+      </div>
+      <div class="rate-card domain">
+        <div class="label">Domain Err</div>
+        <span class="num" id="domainCount">—</span>
+      </div>
+      <div class="rate-card infra">
+        <div class="label">Infra Err</div>
+        <span class="num" id="infraCount">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel ai">
+    <div class="panel-head">
+      <div class="panel-title" style="color:var(--ai)">AI Provider Usage</div>
+      <div class="panel-meta">cost telemetry</div>
+    </div>
+    <div class="ai-stats">
+      <div class="ai-stat">
+        <div class="lbl">Calls</div>
+        <span class="val" id="aiCalls">—</span>
+        <div class="sub">openai · anthropic</div>
+      </div>
+      <div class="ai-stat usd">
+        <div class="lbl">Cost · USD</div>
+        <span class="val" id="aiCost">—</span>
+        <div class="sub">estimated</div>
+      </div>
+    </div>
+    <div class="ai-tokens">
+      <div class="row"><span>Tokens</span><span class="panel-meta" id="aiTotalTokens">—</span></div>
+      <div class="split-bar" id="aiSplit">
+        <div class="prompt" style="width:50%"></div>
+        <div class="completion" style="width:50%"></div>
+      </div>
+      <div class="split-meta">
+        <span>prompt <span id="aiPrompt" style="color:var(--ai)">—</span></span>
+        <span>completion <span id="aiCompletion" style="color:var(--highlight)">—</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-title fade-in" style="animation-delay:320ms">
+  <span>Routes</span><span class="rule"></span>
+  <span class="meta" id="routeCount">—</span>
+</div>
+<div class="routes fade-in" style="animation-delay:380ms">
+  <div class="routes-head">
+    <div>Method</div>
+    <div>Route</div>
+    <div class="num-cell">Calls</div>
+    <div class="num-cell hide-mobile">OK / 4xx / 5xx</div>
+    <div class="hide-mobile">Mix</div>
+    <div class="lat-cell">Avg ms</div>
+  </div>
+  <div id="routeRows"><div class="empty-state">— BOOTING · WAITING FOR FIRST SCRAPE —</div></div>
+</div>
+
+<footer>
+  <div>OSPSD · TEAM 9 · CHAT SERVICE TELEMETRY · v0.3.0</div>
+  <div class="links">
+    <a href="/metrics">/metrics</a>
+    <a href="/metrics/prometheus">/metrics/prometheus</a>
+    <a href="/health">/health</a>
+    <a href="/docs">/docs</a>
+  </div>
+</footer>
+</div>
+
 <script>
 const $=id=>document.getElementById(id);
-async function refresh(){
+const fmt=new Intl.NumberFormat('en-US');
+const pct=v=>v==null?'—':(v*100).toFixed(2)+'%';
+const ms=v=>v==null?'—':v.toFixed(1);
+const usd=v=>'$'+(v==null?'0.000000':Number(v).toFixed(6));
+function esc(s){return String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]));}
+async function poll(){
   try{
-    const r=await fetch('/metrics');
-    const d=await r.json();
-    $('total').textContent=d.total_requests;
-    $('success').textContent=d.successful_requests;
-    $('failed').textContent=d.failed_requests;
-    const sr=(d.success_rate*100).toFixed(1);
-    const fr=(d.failure_rate*100).toFixed(1);
-    $('srate').textContent=sr+'%';
-    $('frate').textContent=fr+'%';
-    const lat=d.average_latency_ms.toFixed(1);
-    $('latency').textContent=lat+' ms';
-    $('sbar').style.width=sr+'%';
-    $('fbar').style.width=fr+'%';
-    const t=new Date().toLocaleTimeString();
-    $('updated').textContent='Updated: '+t;
-  }catch(e){$('updated').textContent='Error';}
+    const r=await fetch('/metrics',{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    render(await r.json());
+    stamp(new Date(),true);
+  }catch(e){stamp(new Date(),false);}
 }
-refresh();
-setInterval(refresh,5000);
+function stamp(t,ok){
+  const h=String(t.getHours()).padStart(2,'0');
+  const m=String(t.getMinutes()).padStart(2,'0');
+  const s=String(t.getSeconds()).padStart(2,'0');
+  $('updated').textContent=h+':'+m+':'+s+(ok?'':' ⚠');
+}
+function render(d){
+  $('total').textContent=fmt.format(d.total_requests||0);
+  $('ok').textContent=fmt.format(d.successful_requests||0);
+  $('failed').textContent=fmt.format(d.failed_requests||0);
+  $('lat').textContent=ms(d.average_latency_ms||0);
+  const okPct=((d.success_rate||0)*100).toFixed(1);
+  const failPct=((d.failure_rate||0)*100).toFixed(1);
+  $('okPct').textContent=okPct+'% of total';
+  $('failPct').textContent=failPct+'% of total';
+  $('okRate').textContent=pct(d.success_rate);
+  $('domainCount').textContent=fmt.format(d.domain_error_count||0);
+  $('infraCount').textContent=fmt.format(d.infra_error_count||0);
+  const total=(d.successful_requests||0)+(d.domain_error_count||0)+(d.infra_error_count||0);
+  const okW=total?(d.successful_requests/total)*100:100;
+  const dW=total?(d.domain_error_count/total)*100:0;
+  const iW=total?(d.infra_error_count/total)*100:0;
+  const sb=$('stackBar').children;
+  sb[0].style.width=okW+'%';sb[0].textContent=okW>=12?'OK '+okW.toFixed(0)+'%':'';
+  sb[1].style.width=dW+'%';sb[1].textContent=dW>=8?'4xx '+dW.toFixed(0)+'%':'';
+  sb[2].style.width=iW+'%';sb[2].textContent=iW>=8?'5xx '+iW.toFixed(0)+'%':'';
+  const ai=d.ai_usage||{};
+  $('aiCalls').textContent=fmt.format(ai.calls_total||0);
+  $('aiCost').textContent=usd(ai.estimated_cost_usd_total||0);
+  $('aiPrompt').textContent=fmt.format(ai.prompt_tokens_total||0);
+  $('aiCompletion').textContent=fmt.format(ai.completion_tokens_total||0);
+  $('aiTotalTokens').textContent=fmt.format(ai.total_tokens_total||0)+' total';
+  const tk=(ai.prompt_tokens_total||0)+(ai.completion_tokens_total||0);
+  const sp=$('aiSplit').children;
+  if(tk>0){sp[0].style.width=((ai.prompt_tokens_total||0)/tk)*100+'%';
+           sp[1].style.width=((ai.completion_tokens_total||0)/tk)*100+'%';}
+  else{sp[0].style.width='50%';sp[1].style.width='50%';}
+  const routes=(d.by_route||[]).slice().sort((a,b)=>(b.count||0)-(a.count||0));
+  $('routeCount').textContent=routes.length+' tracked';
+  const c=$('routeRows');
+  if(!routes.length){c.innerHTML='<div class=\"empty-state\">— NO ROUTES YET · REQUESTS WILL APPEAR HERE —</div>';return;}
+  c.innerHTML=routes.map(r=>{
+    const t=r.count||1;
+    const oP=(r.ok_count/t)*100,dP=(r.domain_error_count/t)*100,iP=(r.infra_error_count/t)*100;
+    const mt=(r.method||'GET').toUpperCase();
+    return '<div class=\"route-row\">'+
+      '<div><span class=\"method-pill '+mt+'\">'+mt+'</span></div>'+
+      '<div class=\"route-name\">'+esc(r.route||'/')+'</div>'+
+      '<div class=\"num-cell\">'+fmt.format(r.count||0)+'</div>'+
+      '<div class=\"num-cell muted hide-mobile\">'+
+        '<span style=\"color:var(--ok)\">'+(r.ok_count||0)+'</span> / '+
+        '<span style=\"color:var(--domain)\">'+(r.domain_error_count||0)+'</span> / '+
+        '<span style=\"color:var(--infra)\">'+(r.infra_error_count||0)+'</span>'+
+      '</div>'+
+      '<div class=\"hide-mobile\"><div class=\"mix-bar\">'+
+        '<div class=\"ok\" style=\"width:'+oP+'%\"></div>'+
+        '<div class=\"domain\" style=\"width:'+dP+'%\"></div>'+
+        '<div class=\"infra\" style=\"width:'+iP+'%\"></div>'+
+      '</div></div>'+
+      '<div class=\"lat-cell\">'+ms(r.average_latency_ms)+'</div>'+
+    '</div>';
+  }).join('');
+}
+$('refresh').addEventListener('click',e=>{
+  const b=e.currentTarget;b.classList.remove('spin');void b.offsetWidth;
+  b.classList.add('spin');poll();
+});
+poll();
+setInterval(poll,5000);
 </script>
 </body>
 </html>
