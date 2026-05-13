@@ -71,6 +71,8 @@ DI hook so swapping providers never touches AI tool definitions or route handler
 
 At runtime, _build_issue_client() resolves the active client in this order:
 
+```
+
                   +---------------------+
    /issues/*   -> | _build_issue_client |
    /ai/chat    -> |   (resolution       |
@@ -84,12 +86,15 @@ At runtime, _build_issue_client() resolves the active client in this order:
   interface, injected)     BASE_URL +       TICKET_BOARD_ID)
                            JIRA_SERVICE_
                            ACCESS_TOKEN)
+```
 
 All three branches conform to the same internal adapter shape so AI tools and
 HTTP route handlers do not branch. Swapping providers is a configuration /
 DI change, not a code change.
 
 ## AI Integration Flow
+
+```
 
   User -> POST /ai/chat {prompt}
           |
@@ -110,6 +115,8 @@ DI change, not a code change.
           |                                              |
           |                                              +-- HTTP -> external tracker
           +-- calendar handlers -> _build_calendar_client() -> CalendarClient
+
+```
 
 The chat handler binds ChatClient per request via the existing session DI;
 the issue handlers resolve the TicketClient lazily from environment so the
