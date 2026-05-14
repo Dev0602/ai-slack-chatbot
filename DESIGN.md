@@ -61,13 +61,22 @@ exposes a REST contract matching the shared schema.
 The chat service consumes two other teams published interfaces as pyproject.toml
 git dependencies:
 
-  chat-client-api from HarshithKoriRaj/Shared-API (Teams 4/8/9 contract)
-  work-mgmt-client-interface from shubham739/team-diamonds HW-3 branch
-  calendar-client-api from bk00119/ospsd-outlook-calendar-team12 hw-3 branch
+```toml
+[project]
+dependencies = [..., "work-mgmt-client-interface"]
 
-Neither dependency is vendored -- uv sync resolves them directly from each
-team HW3 branch. Each is injected via its own register_X_client_factory()
-DI hook so swapping providers never touches AI tool definitions or route handlers.
+[tool.uv.sources]
+chat-client-api = { git = "https://github.com/HarshithKoriRaj/Shared-API" }
+work-mgmt-client-interface = { git = "https://github.com/shubham739/team-diamonds.git", branch = "HW-3", subdirectory = "components/work_mgmt_client_interface" }
+calendar-client-api = { git = "https://github.com/bk00119/ospsd-outlook-calendar-team12.git", branch = "hw-3", subdirectory = "src/calendar_client_api" }
+```
+
+The dependency is **not vendored** — `uv sync` resolves it directly from the
+Diamonds repo. A concrete `IssueTrackerClient` is injected via the
+`register_diamonds_client_factory()` DI hook (mirroring the HW1
+`register_client()` / `get_client()` pattern); swapping between providers
+(Diamonds → legacy Trello → Jira HTTP) is transparent to AI tools and HTTP
+endpoints.
 
 At runtime, _build_issue_client() resolves the active client in this order:
 
