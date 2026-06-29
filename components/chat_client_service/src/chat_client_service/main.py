@@ -1,6 +1,7 @@
 """FastAPI service exposing the chat client contract over HTTP."""
 
 from __future__ import annotations
+import anthropic_ai_client_impl  # noqa: F401
 
 import json
 import os
