@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import anthropic_ai_client_impl  # noqa: F401
+anthropic_ai_client_impl.register()
 
 import json
 import os
