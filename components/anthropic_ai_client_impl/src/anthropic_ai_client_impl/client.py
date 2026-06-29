@@ -17,7 +17,7 @@ from tenacity import (
     wait_exponential,
 )
 
-_DEFAULT_MODEL = "claude-3-5-haiku-20241022"
+_DEFAULT_MODEL = "claude-haiku-4-5"
 _DEFAULT_MAX_TOKENS = 1024
 _MAX_TOOL_ROUNDS = 5
 _MAX_RETRY_ATTEMPTS = 3
@@ -27,7 +27,7 @@ _RETRY_MAX_WAIT_SECONDS = 4
 logger = logging.getLogger(__name__)
 
 _PRICE_PER_1K_TOKENS_USD: dict[str, dict[str, float]] = {
-    "claude-3-5-haiku-20241022": {"prompt": 0.00025, "completion": 0.00125},
+    "claude-haiku-4-5": {"prompt": 0.00025, "completion": 0.00125},
     "claude-3-sonnet-20240229": {"prompt": 0.00300, "completion": 0.01500},
     "claude-3-opus-20240229": {"prompt": 0.01500, "completion": 0.07500},
 }
@@ -55,7 +55,7 @@ def _estimate_cost_usd(model: str, prompt_tokens: int, completion_tokens: int) -
     """Estimate USD cost for a call given token counts."""
     rates = _PRICE_PER_1K_TOKENS_USD.get(
         model,
-        _PRICE_PER_1K_TOKENS_USD["claude-3-5-haiku-20241022"],
+        _PRICE_PER_1K_TOKENS_USD["claude-haiku-4-5"],
     )
     return round(
         (prompt_tokens / 1000.0) * rates["prompt"]
@@ -90,7 +90,7 @@ class AnthropicAiClient(AiClient):
 
         Args:
             api_key: Anthropic API key.
-            model: Model identifier (e.g. claude-3-5-haiku-20241022).
+            model: Model identifier (e.g. claude-haiku-4-5).
             max_tokens: Maximum tokens in the response.
 
         """
